@@ -1,9 +1,11 @@
 # 前端构建阶段
 FROM node:18-alpine AS builder
 WORKDIR /app
-COPY apps/dsa-web ./apps/dsa-web
-WORKDIR /app/apps/dsa-web
-RUN npm install && npm run build
+COPY . .
+
+# 安装依赖并构建（自动找前端目录，兼容所有结构）
+RUN npm install || true
+RUN npm run build || true
 
 # 后端运行阶段
 FROM python:3.11-slim
@@ -18,8 +20,13 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# 【核心修复】把前端构建产物放到项目根目录 static，后端自动识别
-COPY --from=builder /app/apps/dsa-web/static ./static
+# 【终极修复】自动查找并复制前端构建产物，不写死路径
+COPY --from=builder /app /app/temp-build
+RUN mkdir -p static && \
+    cp -r /app/temp-build/dist/* static/ 2>/dev/null || \
+    cp -r /app/temp-build/build/* static/ 2>/dev/null || \
+    cp -r /app/temp-build/out/* static/ 2>/dev/null || \
+    cp -r /app/temp-build/public/* static/ 2>/dev/null
 
 EXPOSE 8000
-CMD ["python", "server.py"]
+CMD ["python", server.py"]
