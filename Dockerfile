@@ -1,31 +1,28 @@
-# 前端构建（强制成功，不报错）
-FROM node:18-alpine AS builder
+#  ===================== 前端自动构建 =====================
+FROM node:18-alpine AS frontend
 WORKDIR /app
 COPY . .
 
-# 强制进入前端目录，强制构建，强制输出产物
+# 进入你的前端目录并构建（精准匹配你的项目）
 WORKDIR /app/apps/dsa-web
 RUN npm install
 RUN npm run build
-RUN ls -la  # 查看产物，确保一定生成
 
-# 后端运行
+#  ===================== 后端服务 =====================
 FROM python:3.11-slim
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends gcc && rm -rf /var/lib/apt/lists/*
-
+# 安装依赖
+RUN apt-get update && apt-get install -y --no-install-recommends gcc
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# 复制项目代码
 COPY . .
 
-# 【核心修复】不管产物叫 dist/build/out，全部复制到 static
-COPY --from=builder /app/apps/dsa-web /temp-frontend
-RUN mkdir -p static && \
-    cp -r /temp-frontend/dist/* static/ 2>/dev/null || \
-    cp -r /temp-frontend/build/* static/ 2>/dev/null || \
-    cp -r /temp-frontend/out/* static/ 2>/dev/null
+# 把前端构建好的页面复制到后端
+COPY --from=frontend /app/apps/dsa-web/dist /app/static/
 
+# 启动服务（你的真实启动路径）
 EXPOSE 8000
 CMD ["python", "scripts/server.py"]
