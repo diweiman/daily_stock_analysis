@@ -21,8 +21,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # 复制所有代码
 COPY . .
 
-# 复制构建好的前端（Vite 输出到 dist）
-COPY --from=builder /app/apps/dsa-web/dist ./apps/dsa-web/dist
+# 复制整个前端构建结果
+COPY --from=builder /app/apps/dsa-web ./apps/dsa-web
 
 # 暴露端口
 EXPOSE 8000
